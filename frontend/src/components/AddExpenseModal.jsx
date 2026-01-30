@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Camera, Loader2 } from 'lucide-react';
+import Tesseract from 'tesseract.js';
+import toast from '../utils/toast';
 import './CreateGroupModal.css';
 import './AddExpenseModal.css';
 
@@ -13,11 +15,61 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
     splitType: 'equal'
   });
 
+  const [scanning, setScanning] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState(new Set());
   const [customSplits, setCustomSplits] = useState({});
   const [percentageSplits, setPercentageSplits] = useState({});
 
   const categories = ['Food', 'Travel', 'Accommodation', 'Entertainment', 'Utilities', 'Other'];
+
+  const handleScanReceipt = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setScanning(true);
+    toast.info('Scanning receipt, please wait...');
+
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+
+      // Simple logic to find amount (looking for things like "Total: 123.45" or just numbers)
+      const lines = text.split('\n');
+      let foundAmount = null;
+      let foundDescription = '';
+
+      // Try to find the largest number which is often the total
+      const amountRegex = /(\d+\.\d{2})/g;
+      const allMatches = text.match(amountRegex);
+      if (allMatches) {
+        const numbers = allMatches.map(m => parseFloat(m));
+        foundAmount = Math.max(...numbers).toString();
+      }
+
+      // Try to find a description from common keywords
+      const commonKeywords = ['lunch', 'dinner', 'coffee', 'grocery', 'uber', 'taxi', 'fuel', 'petrol', 'hotel', 'flight'];
+      const words = text.toLowerCase().split(/\s+/);
+      const keywordMatch = words.find(w => commonKeywords.includes(w));
+      if (keywordMatch) {
+        foundDescription = keywordMatch.charAt(0).toUpperCase() + keywordMatch.slice(1);
+      } else if (lines.length > 0) {
+        // Fallback to the first line as description
+        foundDescription = lines[0].trim().substring(0, 30);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        amount: foundAmount || prev.amount,
+        description: foundDescription || prev.description
+      }));
+
+      toast.success('Receipt scanned successfully!');
+    } catch (error) {
+      console.error('OCR Error:', error);
+      toast.error('Failed to scan receipt. Please enter details manually.');
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -132,7 +184,32 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
 
         <form onSubmit={handleSubmit} className="expense-modal-form">
           <div className="modal-form-group">
-            <label className="modal-label">Description *</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <label className="modal-label" style={{ marginBottom: 0 }}>Description *</label>
+              <label className="scan-button" style={{
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: scanning ? 'not-allowed' : 'pointer',
+                color: '#93A87E',
+                fontWeight: '600',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '0.5rem',
+                backgroundColor: 'rgba(147, 168, 126, 0.1)',
+                transition: 'all 0.2s ease'
+              }}>
+                {scanning ? <Loader2 size={14} className="spin" /> : <Camera size={14} />}
+                {scanning ? 'Scanning...' : 'Scan Receipt'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScanReceipt}
+                  style={{ display: 'none' }}
+                  disabled={scanning}
+                />
+              </label>
+            </div>
             <input
               type="text"
               name="description"

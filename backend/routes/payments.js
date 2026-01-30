@@ -5,7 +5,11 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16', // Specify API version for stability
+  maxNetworkRetries: 3,     // Automatically retry on network failures
+  timeout: 10000            // 10 second timeout
+});
 
 router.post('/create-payment-intent', authMiddleware, async (req, res) => {
   try {
@@ -80,6 +84,71 @@ router.post('/create-payment-intent', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/create-checkout-session', authMiddleware, async (req, res) => {
+  try {
+    const { amount, toUserId, groupId } = req.body;
+    let { settlementId } = req.body;
+
+    if (!amount || !toUserId || !groupId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+
+    const userId = req.user.userId;
+
+    // Create pending settlement if needed
+    if (!settlementId) {
+      const settlementResult = await query(
+        `INSERT INTO settlements (group_id, from_user, to_user, amount, status, payment_method)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [groupId, userId, toUserId, amount, 'pending', 'stripe']
+      );
+      settlementId = settlementResult.rows[0].id;
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'inr',
+            product_data: {
+              name: `Expense Settlement for Group`,
+              description: `Payment from user ${userId} to user ${toUserId}`,
+            },
+            unit_amount: Math.round(parseFloat(amount) * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/groups/${groupId}?payment=success&sid=${settlementId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/groups/${groupId}?payment=cancelled`,
+      metadata: {
+        settlementId: settlementId.toString(),
+        groupId: groupId.toString()
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: session.id,
+        url: session.url
+      }
+    });
+  } catch (error) {
+    console.error('Checkout Session error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error creating checkout session'
+    });
+  }
+});
+
 router.post('/confirm-payment', authMiddleware, async (req, res) => {
   try {
     const { paymentIntentId, settlementId } = req.body;
@@ -131,6 +200,40 @@ router.post('/confirm-payment', authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error confirming payment'
+    });
+  }
+});
+
+router.get('/verify-session/:sessionId', authMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === 'paid') {
+      const settlementId = session.metadata.settlementId;
+
+      await query(
+        `UPDATE settlements 
+         SET status = 'completed', payment_method = 'stripe', settled_at = NOW()
+         WHERE id = $1`,
+        [settlementId]
+      );
+
+      res.json({
+        success: true,
+        message: 'Payment verified and settlement updated'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: 'Payment not completed'
+      });
+    }
+  } catch (error) {
+    console.error('Verify session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error verifying payment'
     });
   }
 });

@@ -14,55 +14,25 @@ export default function PaymentModal({ settlement, onClose, onPaid }) {
   const handleStripePayment = async () => {
     setLoading(true);
     try {
-      // Create payment intent
-      const response = await apiClient.post('/payments/create-payment-intent', {
+      // Create checkout session
+      const response = await apiClient.post('/payments/create-checkout-session', {
         amount: settlement.amount,
         toUserId: settlement.to,
         groupId: settlement.groupId,
-        settlementId: settlement.id // might be null if it's a proposal
+        settlementId: settlement.id
       });
 
-      const { clientSecret, paymentIntentId, settlementId } = response.data.data;
+      const { url } = response.data.data;
 
-      // Initialize Stripe
-      if (!window.Stripe) {
-        toast.error('Stripe SDK not loaded. Please refresh.');
-        setLoading(false);
-        return;
-      }
-
-      const stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-      // Use Stripe's test card payment (tok_visa) for quick verification
-      // With the actual keys provided, this will work in Test Mode
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: {
-            token: 'tok_visa'
-          }
-        }
-      });
-
-      if (error) {
-        toast.error(error.message || 'Payment failed');
-        setLoading(false);
-        return;
-      }
-
-      if (paymentIntent.status === 'succeeded') {
-        // Confirm payment on backend
-        await apiClient.post('/payments/confirm-payment', {
-          paymentIntentId: paymentIntentId,
-          settlementId: settlementId
-        });
-
-        toast.success('Stripe payment successful!');
-        onPaid();
-        onClose();
+      if (url) {
+        // Redirect to Stripe Hosted Checkout
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to get checkout URL');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error(error.response?.data?.error || 'Failed to process Stripe payment');
+      toast.error(error.response?.data?.error || 'Failed to redirect to Stripe');
     } finally {
       setLoading(false);
     }
