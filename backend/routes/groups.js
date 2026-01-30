@@ -4,17 +4,11 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-/**
- * Generate unique 6-character group code
- */
+
 const generateGroupCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
-/**
- * POST /
- * Create a new group
- */
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { name, description, category, type } = req.body;
@@ -64,10 +58,6 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * GET /my-groups
- * Get all groups user belongs to with stats
- */
 router.get('/my-groups', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -75,13 +65,10 @@ router.get('/my-groups', authMiddleware, async (req, res) => {
     const result = await query(
       `SELECT 
         g.id, g.name, g.description, g.code, g.category, g.type, g.created_at,
-        COUNT(DISTINCT gm.user_id) as member_count,
-        COALESCE(SUM(e.amount), 0) as total_expenses
+        (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count,
+        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE group_id = g.id) as total_expenses
       FROM groups g
-      LEFT JOIN group_members gm ON g.id = gm.group_id
-      LEFT JOIN expenses e ON g.id = e.group_id
       WHERE g.id IN (SELECT group_id FROM group_members WHERE user_id = $1)
-      GROUP BY g.id
       ORDER BY g.created_at DESC`,
       [userId]
     );
@@ -112,11 +99,9 @@ router.get('/public', async (req, res) => {
     const { search } = req.query;
     let sql = `SELECT 
         g.id, g.name, g.description, g.code, g.category, g.type, g.created_at,
-        COUNT(DISTINCT gm.user_id) as member_count,
-        COALESCE(SUM(e.amount), 0) as total_expenses
+        (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count,
+        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE group_id = g.id) as total_expenses
       FROM groups g
-      LEFT JOIN group_members gm ON g.id = gm.group_id
-      LEFT JOIN expenses e ON g.id = e.group_id
       WHERE g.type = 'public'`;
 
     const params = [];
@@ -126,7 +111,7 @@ router.get('/public', async (req, res) => {
       params.push(`%${search}%`);
     }
 
-    sql += ` GROUP BY g.id ORDER BY g.created_at DESC LIMIT 50`;
+    sql += ` ORDER BY g.created_at DESC LIMIT 50`;
 
     const result = await query(sql, params);
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import './CreateGroupModal.css';
+import './AddExpenseModal.css';
 
 export default function AddExpenseModal({ onClose, onAdd, members }) {
   const [formData, setFormData] = useState({
@@ -119,33 +121,30 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
   const amount = parseFloat(formData.amount) || 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 md:p-8 my-8 border border-white/20 animate-slide-in-right">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Add Expense</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors p-1 hover:bg-gray-100 rounded-lg"
-          >
+    <div className="modal-overlay" style={{ overflowY: 'auto' }}>
+      <div className="modal-content" style={{ margin: '2rem 0' }}>
+        <div className="modal-header">
+          <h2 className="modal-title">Add Expense</h2>
+          <button onClick={onClose} className="modal-close-button">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto pr-2">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Description *</label>
+        <form onSubmit={handleSubmit} className="expense-modal-form">
+          <div className="modal-form-group">
+            <label className="modal-label">Description *</label>
             <input
               type="text"
               name="description"
               value={formData.description}
               onChange={handleChange}
               placeholder="e.g., Lunch"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="modal-input"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Amount *</label>
+          <div className="modal-form-group">
+            <label className="modal-label">Amount *</label>
             <input
               type="number"
               name="amount"
@@ -154,17 +153,17 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
               placeholder="0.00"
               step="0.01"
               min="0"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="modal-input"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Paid By *</label>
+          <div className="modal-form-group">
+            <label className="modal-label">Paid By *</label>
             <select
               name="paidBy"
               value={formData.paidBy}
               onChange={handleChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="modal-select"
             >
               <option value="">Select person</option>
               {members.map(m => (
@@ -173,13 +172,13 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+          <div className="modal-form-group">
+            <label className="modal-label">Category</label>
             <select
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="modal-select"
             >
               {categories.map(cat => (
                 <option key={cat} value={cat.toLowerCase()}>{cat}</option>
@@ -187,49 +186,49 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+          <div className="modal-form-group">
+            <label className="modal-label">Date</label>
             <input
               type="date"
               name="date"
               value={formData.date}
               onChange={handleChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+              className="modal-input"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Split Type</label>
-            <div className="space-y-2 bg-gray-50 p-4 rounded-xl">
+          <div className="modal-form-group">
+            <label className="modal-label">Split Type</label>
+            <div className="modal-radio-group">
               {['equal', 'custom', 'percentage'].map(type => (
-                <label key={type} className="flex items-center cursor-pointer hover:bg-white p-2 rounded-lg transition-colors">
+                <label key={type} className="modal-radio-label">
                   <input
                     type="radio"
                     name="splitType"
                     value={type}
                     checked={formData.splitType === type}
                     onChange={handleChange}
-                    className="mr-3 w-4 h-4 text-indigo-600"
+                    className="modal-radio-input"
                   />
-                  <span className="text-gray-700 font-medium capitalize">{type} Split</span>
+                  <span className="modal-radio-text" style={{ textTransform: 'capitalize' }}>{type} Split</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Split Between</label>
-            <div className="space-y-3 max-h-48 overflow-y-auto bg-gray-50 p-4 rounded-xl">
+          <div className="modal-form-group">
+            <label className="modal-label">Split Between</label>
+            <div className="expense-modal-checkbox-group">
               {members.map(member => (
-                <div key={member.id} className="bg-white p-3 rounded-lg border-2 border-gray-200">
-                  <label className="flex items-center cursor-pointer">
+                <div key={member.id} className="expense-modal-member-item">
+                  <label className="expense-modal-checkbox-label">
                     <input
                       type="checkbox"
                       checked={selectedMembers.has(member.id)}
                       onChange={() => toggleMember(member.id)}
-                      className="mr-3 w-4 h-4 text-indigo-600"
+                      className="expense-modal-checkbox"
                     />
-                    <span className="text-gray-700 font-medium">{member.name}</span>
+                    <span className="expense-modal-member-name">{member.name}</span>
                   </label>
 
                   {selectedMembers.has(member.id) && formData.splitType === 'custom' && (
@@ -242,7 +241,7 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
                         ...customSplits,
                         [member.id]: e.target.value
                       })}
-                      className="ml-7 mt-2 w-32 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="expense-modal-split-input"
                     />
                   )}
 
@@ -256,7 +255,7 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
                         ...percentageSplits,
                         [member.id]: e.target.value
                       })}
-                      className="ml-7 mt-2 w-32 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="expense-modal-split-input"
                     />
                   )}
                 </div>
@@ -264,18 +263,11 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-all duration-200"
-            >
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="modal-button modal-button--cancel">
               Cancel
             </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
+            <button type="submit" className="modal-button modal-button--submit">
               Add
             </button>
           </div>

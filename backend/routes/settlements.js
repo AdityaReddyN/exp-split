@@ -5,15 +5,9 @@ import { calculateOptimalSettlements, calculateBalances } from '../utils/settlem
 
 const router = express.Router();
 
-/**
- * GET /:groupId
- * Calculate balances and return optimized settlement transactions
- */
 router.get('/:groupId', authMiddleware, async (req, res) => {
   try {
     const { groupId } = req.params;
-
-    // Get all expenses with splits
     const expensesResult = await query(
       `SELECT 
         e.id, e.amount, e.paid_by,
@@ -36,7 +30,6 @@ router.get('/:groupId', authMiddleware, async (req, res) => {
         }))
     }));
 
-    // Calculate individual balances
     const balances = {};
     for (const expense of expenses) {
       if (!balances[expense.paid_by]) {
@@ -52,15 +45,39 @@ router.get('/:groupId', authMiddleware, async (req, res) => {
       }
     }
 
-    // Round to 2 decimals
-    for (const userId in balances) {
-      balances[userId] = parseFloat(balances[userId].toFixed(2));
+    // Fetch completed settlements
+    const completedSettlementsResult = await query(
+      `SELECT from_user, to_user, amount 
+       FROM settlements 
+       WHERE group_id = $1 AND status = 'completed'`,
+      [groupId]
+    );
+
+    // Subtract completed settlements from balances
+    for (const settlement of completedSettlementsResult.rows) {
+      const from = settlement.from_user;
+      const to = settlement.to_user;
+      const amount = parseFloat(settlement.amount);
+
+      if (!balances[from]) balances[from] = 0;
+      if (!balances[to]) balances[to] = 0;
+
+      // When 'from' pays 'to', 'from''s balance increases (less debt)
+      // and 'to''s balance decreases (less receivable)
+      balances[from] += amount;
+      balances[to] -= amount;
     }
 
-    // Get optimal settlements
-    const settlements = calculateOptimalSettlements(balances);
+    const cleanedBalances = {};
+    for (const userId in balances) {
+      const b = parseFloat(balances[userId].toFixed(2));
+      if (Math.abs(b) > 0.01) { // Filter out dust balances
+        cleanedBalances[userId] = b;
+      }
+    }
 
-    // Get member details for response
+    const settlements = calculateOptimalSettlements(cleanedBalances);
+
     const membersResult = await query(
       `SELECT u.id, u.name FROM group_members gm
        JOIN users u ON gm.user_id = u.id
@@ -73,18 +90,16 @@ router.get('/:groupId', authMiddleware, async (req, res) => {
       memberMap[member.id] = member.name;
     });
 
-    // Enhance settlements with member names
     const enhancedSettlements = settlements.map(s => ({
       ...s,
       fromName: memberMap[s.from],
       toName: memberMap[s.to]
     }));
 
-    // Build balance array with member names
     const balanceArray = Object.entries(balances).map(([userId, balance]) => ({
       userId: parseInt(userId),
       name: memberMap[parseInt(userId)],
-      balance
+      balance: parseFloat(balance.toFixed(2))
     }));
 
     res.json({
@@ -105,16 +120,11 @@ router.get('/:groupId', authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * POST /mark-paid
- * Mark a settlement as completed
- */
 router.post('/mark-paid', authMiddleware, async (req, res) => {
   try {
     const { groupId, fromUserId, toUserId, amount, paymentMethod } = req.body;
     const userId = req.user.userId;
 
-    // Verify user is involved in settlement (either payer or receiver)
     if (userId !== fromUserId && userId !== toUserId) {
       return res.status(403).json({
         success: false,
@@ -122,7 +132,6 @@ router.post('/mark-paid', authMiddleware, async (req, res) => {
       });
     }
 
-    // Create settlement record
     const result = await query(
       `INSERT INTO settlements (group_id, from_user, to_user, amount, status, payment_method, settled_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -147,10 +156,6 @@ router.post('/mark-paid', authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * GET /history/:groupId
- * Get settlement history for a group
- */
 router.get('/history/:groupId', authMiddleware, async (req, res) => {
   try {
     const { groupId } = req.params;

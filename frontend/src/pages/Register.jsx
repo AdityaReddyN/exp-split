@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 import authUtils from '../utils/auth';
 import toast from '../utils/toast';
+import './Register.css';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -46,67 +47,71 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
-          <div className="flex justify-center mb-6">
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-4 rounded-2xl shadow-lg">
-              <UserPlus className="text-white" size={32} />
+    <div className="register-container">
+      <div className="register-wrapper">
+        <div className="register-card">
+          <Link to="/dashboard" className="register-back-button">
+            <ArrowLeft size={20} /> Back to Dashboard
+          </Link>
+
+          <div className="register-icon-wrapper">
+            <div className="register-icon">
+              <UserPlus size={32} />
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">Create Account</h1>
-          <p className="text-center text-gray-600 mb-8">Join and start splitting expenses</p>
+          <h1 className="register-title">Create Account</h1>
+          <p className="register-subtitle">Join and start splitting expenses</p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+          <form onSubmit={handleSubmit} className="register-form">
+            <div className="register-form-group">
+              <label className="register-label">Full Name</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                className="register-input"
                 placeholder="John Doe"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+            <div className="register-form-group">
+              <label className="register-label">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                className="register-input"
                 placeholder="you@example.com"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <div className="register-form-group">
+              <label className="register-label">Password</label>
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                className="register-input"
                 placeholder="••••••••"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+            <div className="register-form-group">
+              <label className="register-label">Confirm Password</label>
               <input
                 type="password"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                className="register-input"
                 placeholder="••••••••"
               />
             </div>
@@ -114,15 +119,15 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+              className="register-button"
             >
               {loading ? 'Creating account...' : 'Sign Up'}
             </button>
           </form>
 
-          <p className="text-center text-gray-600 mt-6">
+          <p className="register-footer">
             Already have an account?{' '}
-            <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors">
+            <Link to="/login" className="register-link">
               Sign in
             </Link>
           </p>

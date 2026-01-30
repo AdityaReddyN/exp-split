@@ -1,6 +1,4 @@
 
-
--- Users table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -9,8 +7,6 @@ CREATE TABLE IF NOT EXISTS users (
   avatar VARCHAR(10) DEFAULT '👤',
   created_at TIMESTAMP DEFAULT NOW()
 );
-
--- Groups table
 CREATE TABLE IF NOT EXISTS groups (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -22,7 +18,6 @@ CREATE TABLE IF NOT EXISTS groups (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Group members table
 CREATE TABLE IF NOT EXISTS group_members (
   id SERIAL PRIMARY KEY,
   group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
@@ -31,8 +26,6 @@ CREATE TABLE IF NOT EXISTS group_members (
   joined_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(group_id, user_id)
 );
-
--- Expenses table
 CREATE TABLE IF NOT EXISTS expenses (
   id SERIAL PRIMARY KEY,
   group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
@@ -45,7 +38,6 @@ CREATE TABLE IF NOT EXISTS expenses (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Expense splits table
 CREATE TABLE IF NOT EXISTS expense_splits (
   id SERIAL PRIMARY KEY,
   expense_id INTEGER REFERENCES expenses(id) ON DELETE CASCADE,
@@ -54,7 +46,6 @@ CREATE TABLE IF NOT EXISTS expense_splits (
   UNIQUE(expense_id, user_id)
 );
 
--- Settlements table
 CREATE TABLE IF NOT EXISTS settlements (
   id SERIAL PRIMARY KEY,
   group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
@@ -68,7 +59,6 @@ CREATE TABLE IF NOT EXISTS settlements (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_groups_code ON groups(code);
 CREATE INDEX IF NOT EXISTS idx_groups_created_by ON groups(created_by);
@@ -83,8 +73,3 @@ CREATE INDEX IF NOT EXISTS idx_settlements_group ON settlements(group_id);
 CREATE INDEX IF NOT EXISTS idx_settlements_from_user ON settlements(from_user);
 CREATE INDEX IF NOT EXISTS idx_settlements_to_user ON settlements(to_user);
 CREATE INDEX IF NOT EXISTS idx_settlements_status ON settlements(status);
-
--- Sample data (optional, for testing)
--- INSERT INTO users (name, email, password_hash) VALUES
--- ('John Doe', 'john@example.com', '$2b$10$...'),
--- ('Jane Smith', 'jane@example.com', '$2b$10$...');

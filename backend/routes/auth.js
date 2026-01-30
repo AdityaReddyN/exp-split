@@ -8,8 +8,6 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -23,8 +21,6 @@ router.post('/register', async (req, res) => {
         error: 'Password must be at least 6 characters'
       });
     }
-
-    // Check if user already exists
     const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
       return res.status(409).json({
@@ -33,10 +29,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert user
     const result = await query(
       'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
       [name, email, hashedPassword]
@@ -63,15 +56,11 @@ router.post('/register', async (req, res) => {
   }
 });
 
-/**
- * POST /login
- * Login user with email and password
- */
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
+    
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -79,7 +68,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user
+    
     const result = await query(
       'SELECT id, name, email, password_hash FROM users WHERE email = $1',
       [email]
@@ -94,7 +83,7 @@ router.post('/login', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Verify password
+    
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
       return res.status(401).json({
@@ -103,7 +92,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate token
+    
     const token = generateToken(user.id, user.email, user.name);
 
     res.json({
@@ -124,10 +113,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-/**
- * GET /me
- * Get current user info from token
- */
 router.get('/me', async (req, res) => {
   try {
     const userId = req.user.userId;

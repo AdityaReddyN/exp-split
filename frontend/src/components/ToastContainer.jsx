@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import toast from '../utils/toast';
+import './ToastContainer.css';
 
 export default function ToastContainer() {
   const [toasts, setToasts] = useState([]);
@@ -20,32 +21,26 @@ export default function ToastContainer() {
     }
   };
 
-  const getColors = (type) => {
+  const getToastClass = (type) => {
     switch (type) {
       case 'success':
-        return 'bg-green-50/95 border-green-300 text-green-900';
+        return 'toast--success';
       case 'error':
-        return 'bg-red-50/95 border-red-300 text-red-900';
+        return 'toast--error';
       default:
-        return 'bg-blue-50/95 border-blue-300 text-blue-900';
+        return 'toast--info';
     }
   };
 
   return (
-    <div className="fixed top-4 right-4 space-y-3 z-50 max-w-md">
+    <div className="toast-container">
       {toasts.map(t => (
-        <div
-          key={t.id}
-          className={`flex items-center gap-3 px-5 py-4 rounded-xl border-2 ${getColors(t.type)} shadow-2xl animate-slide-in-right backdrop-blur-sm`}
-        >
-          <div className="flex-shrink-0">
+        <div key={t.id} className={`toast ${getToastClass(t.type)}`}>
+          <div className="toast-icon">
             {getIcon(t.type)}
           </div>
-          <span className="flex-1 font-medium">{t.message}</span>
-          <button
-            onClick={() => {}}
-            className="text-current opacity-60 hover:opacity-100 transition-opacity p-1 hover:bg-black/10 rounded-lg"
-          >
+          <span className="toast-message">{t.message}</span>
+          <button onClick={() => {}} className="toast-close">
             <X size={18} />
           </button>
         </div>

@@ -3,56 +3,66 @@ import { X, CreditCard, Smartphone } from 'lucide-react';
 import QRCode from 'qrcode.react';
 import apiClient from '../utils/api';
 import toast from '../utils/toast';
+import './CreateGroupModal.css';
+import './PaymentModal.css';
 
 export default function PaymentModal({ settlement, onClose, onPaid }) {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [showQR, setShowQR] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleRazorpayPayment = async () => {
+  const handleStripePayment = async () => {
     setLoading(true);
     try {
-      // Create order
-      const orderResponse = await apiClient.post('/payments/create-order', {
+      // Create payment intent
+      const response = await apiClient.post('/payments/create-payment-intent', {
         amount: settlement.amount,
-        settlementId: settlement.id,
-        toUserId: settlement.to
+        toUserId: settlement.to,
+        groupId: settlement.groupId,
+        settlementId: settlement.id // might be null if it's a proposal
       });
 
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY || 'rzp_test_xxxxx',
-        amount: settlement.amount * 100,
-        currency: 'INR',
-        order_id: orderResponse.data.data.orderId,
-        name: 'Expense Split',
-        description: `Payment to ${settlement.toName}`,
-        handler: async (response) => {
-          try {
-            // Verify payment
-            await apiClient.post('/payments/verify', {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              settlementId: settlement.id
-            });
+      const { clientSecret, paymentIntentId, settlementId } = response.data.data;
 
-            toast.success('Payment successful!');
-            onPaid();
-            onClose();
-          } catch (error) {
-            toast.error('Payment verification failed');
+      // Initialize Stripe
+      if (!window.Stripe) {
+        toast.error('Stripe SDK not loaded. Please refresh.');
+        setLoading(false);
+        return;
+      }
+
+      const stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+      // Use Stripe's test card payment (tok_visa) for quick verification
+      // With the actual keys provided, this will work in Test Mode
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: {
+            token: 'tok_visa'
           }
-        },
-        prefill: {
-          contact: '',
-          email: ''
         }
-      };
+      });
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      if (error) {
+        toast.error(error.message || 'Payment failed');
+        setLoading(false);
+        return;
+      }
+
+      if (paymentIntent.status === 'succeeded') {
+        // Confirm payment on backend
+        await apiClient.post('/payments/confirm-payment', {
+          paymentIntentId: paymentIntentId,
+          settlementId: settlementId
+        });
+
+        toast.success('Stripe payment successful!');
+        onPaid();
+        onClose();
+      }
     } catch (error) {
-      toast.error('Failed to initialize payment');
+      console.error('Payment error:', error);
+      toast.error(error.response?.data?.error || 'Failed to process Stripe payment');
     } finally {
       setLoading(false);
     }
@@ -80,59 +90,56 @@ export default function PaymentModal({ settlement, onClose, onPaid }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 md:p-8 border border-white/20 animate-slide-in-right">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Payment</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors p-1 hover:bg-gray-100 rounded-lg"
-          >
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2 className="modal-title">Payment</h2>
+          <button onClick={onClose} className="modal-close-button">
             <X size={24} />
           </button>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-5 mb-6 border-2 border-indigo-200">
-          <p className="text-gray-600 text-sm font-semibold mb-4">Payment Details</p>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">From:</span>
-              <span className="font-bold text-gray-900">{settlement.fromName}</span>
+        <div className="payment-modal-details">
+          <p className="payment-modal-details-title">Payment Details</p>
+          <div className="payment-modal-details-list">
+            <div className="payment-modal-detail-row">
+              <span className="payment-modal-detail-label">From:</span>
+              <span className="payment-modal-detail-value">{settlement.fromName}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">To:</span>
-              <span className="font-bold text-gray-900">{settlement.toName}</span>
+            <div className="payment-modal-detail-row">
+              <span className="payment-modal-detail-label">To:</span>
+              <span className="payment-modal-detail-value">{settlement.toName}</span>
             </div>
-            <div className="flex justify-between items-center pt-3 border-t border-indigo-200">
-              <span className="font-bold text-gray-900 text-lg">Amount:</span>
-              <span className="font-bold text-indigo-600 text-2xl">₹{settlement.amount.toFixed(2)}</span>
+            <div className="payment-modal-detail-row payment-modal-detail-row--total">
+              <span className="payment-modal-detail-label payment-modal-detail-label--total">Amount:</span>
+              <span className="payment-modal-detail-value payment-modal-detail-value--total">₹{settlement.amount.toFixed(2)}</span>
             </div>
           </div>
         </div>
 
-        <div className="space-y-3 mb-6">
+        <div className="payment-modal-actions">
           <button
             onClick={() => {
-              setPaymentMethod('razorpay');
-              handleRazorpayPayment();
+              setPaymentMethod('stripe');
+              handleStripePayment();
             }}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-400 text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+            className="payment-modal-button payment-modal-button--razorpay"
           >
             <CreditCard size={20} />
-            Pay with Razorpay
+            Pay with Stripe
           </button>
 
           <button
             onClick={() => setShowQR(!showQR)}
-            className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="payment-modal-button payment-modal-button--upi"
           >
             <Smartphone size={20} />
             {showQR ? 'Hide UPI QR' : 'UPI QR Code'}
           </button>
 
           {showQR && (
-            <div className="flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-gray-200 animate-fade-in">
+            <div className="payment-modal-qr-wrapper">
               <QRCode
                 value={`upi://pay?pa=your_upi_id@bank&pn=${settlement.toName}&am=${settlement.amount}`}
                 size={200}
@@ -143,16 +150,13 @@ export default function PaymentModal({ settlement, onClose, onPaid }) {
           <button
             onClick={handleMarkPaid}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 disabled:from-gray-400 disabled:to-gray-400 text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+            className="payment-modal-button payment-modal-button--cash"
           >
             Mark as Paid (Cash)
           </button>
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-all duration-200"
-        >
+        <button onClick={onClose} className="payment-modal-button--close">
           Close
         </button>
       </div>

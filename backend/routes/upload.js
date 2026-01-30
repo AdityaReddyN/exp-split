@@ -5,14 +5,11 @@ import fs from 'fs';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
-
-// Ensure uploads directory exists
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -24,12 +21,10 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Accept only image files
   if (!file.mimetype.startsWith('image/')) {
     return cb(new Error('Only image files are allowed'), false);
   }
 
-  // Check file size (max 5MB)
   const maxSize = process.env.MAX_FILE_SIZE || 5242880;
   if (file.size > maxSize) {
     return cb(new Error('File size exceeds maximum limit'), false);
@@ -46,10 +41,6 @@ const upload = multer({
   }
 });
 
-/**
- * POST /receipt
- * Upload receipt image
- */
 router.post('/receipt', authMiddleware, upload.single('receipt'), async (req, res) => {
   try {
     if (!req.file) {
@@ -59,7 +50,6 @@ router.post('/receipt', authMiddleware, upload.single('receipt'), async (req, re
       });
     }
 
-    // Return file URL (relative path)
     const fileUrl = `/uploads/${req.file.filename}`;
 
     res.status(201).json({
@@ -80,16 +70,11 @@ router.post('/receipt', authMiddleware, upload.single('receipt'), async (req, re
   }
 });
 
-/**
- * GET /:filename
- * Download uploaded file
- */
 router.get('/:filename', (req, res) => {
   try {
     const { filename } = req.params;
     const filepath = path.join(uploadDir, filename);
-
-    // Prevent directory traversal
+    
     const resolvedPath = path.resolve(filepath);
     if (!resolvedPath.startsWith(path.resolve(uploadDir))) {
       return res.status(403).json({

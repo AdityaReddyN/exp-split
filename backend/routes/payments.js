@@ -1,32 +1,24 @@
 import express from 'express';
-import crypto from 'crypto';
-import Razorpay from 'razorpay';
+import Stripe from 'stripe';
 import { query } from '../utils/db.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-/**
- * POST /create-order
- * Create Razorpay order for payment
- */
-router.post('/create-order', authMiddleware, async (req, res) => {
+router.post('/create-payment-intent', authMiddleware, async (req, res) => {
   try {
-    const { amount, settlementId, toUserId } = req.body;
+    const { amount, toUserId, groupId } = req.body;
+    let { settlementId } = req.body;
 
-    if (!amount || !settlementId || !toUserId) {
+    if (!amount || !toUserId || !groupId) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
       });
     }
 
-    // Validate amount
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({
@@ -35,73 +27,84 @@ router.post('/create-order', authMiddleware, async (req, res) => {
       });
     }
 
-    // Create Razorpay order (amount in paise)
-    const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(parsedAmount * 100),
-      currency: 'INR',
-      receipt: `settlement_${settlementId}`,
-      notes: {
-        settlementId,
-        toUserId
-      }
+    const userId = req.user.userId;
+
+    // If no settlementId exists, create a pending settlement record
+    if (!settlementId) {
+      const settlementResult = await query(
+        `INSERT INTO settlements (group_id, from_user, to_user, amount, status, payment_method)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [groupId, userId, toUserId, parsedAmount, 'pending', 'stripe']
+      );
+      settlementId = settlementResult.rows[0].id;
+    }
+
+    // Create a PaymentIntent with Stripe
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(parsedAmount * 100), // Stripe uses smallest currency unit (paise for INR)
+      currency: 'inr',
+      metadata: {
+        settlementId: settlementId.toString(),
+        fromUserId: userId.toString(),
+        toUserId: toUserId.toString(),
+        groupId: groupId.toString()
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
     });
 
-    // Store order in database
+    // Update the settlement with the payment intent ID
     await query(
       `UPDATE settlements SET payment_id = $1 WHERE id = $2`,
-      [razorpayOrder.id, settlementId]
+      [paymentIntent.id, settlementId]
     );
 
     res.json({
       success: true,
       data: {
-        orderId: razorpayOrder.id,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        settlementId,
         amount: parsedAmount,
         currency: 'INR'
       }
     });
   } catch (error) {
-    console.error('Create order error:', error);
+    console.error('Create payment intent error:', error);
     res.status(500).json({
       success: false,
-      error: 'Error creating payment order'
+      error: 'Error creating payment intent'
     });
   }
 });
 
-/**
- * POST /verify
- * Verify Razorpay payment signature
- */
-router.post('/verify', authMiddleware, async (req, res) => {
+router.post('/confirm-payment', authMiddleware, async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, settlementId } = req.body;
+    const { paymentIntentId, settlementId } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    if (!paymentIntentId || !settlementId) {
       return res.status(400).json({
         success: false,
         error: 'Missing payment details'
       });
     }
 
-    // Verify signature
-    const body = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest('hex');
+    // Retrieve the payment intent from Stripe to verify its status
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    if (expectedSignature !== razorpay_signature) {
+    if (paymentIntent.status !== 'succeeded') {
       return res.status(400).json({
         success: false,
-        error: 'Invalid payment signature'
+        error: 'Payment not completed'
       });
     }
 
-    // Update settlement status
+    // Update settlement status in database
     const result = await query(
       `UPDATE settlements 
-       SET status = 'completed', payment_method = 'razorpay', settled_at = NOW()
+       SET status = 'completed', payment_method = 'stripe', settled_at = NOW()
        WHERE id = $1
        RETURNING id, amount, status`,
       [settlementId]
@@ -120,14 +123,14 @@ router.post('/verify', authMiddleware, async (req, res) => {
         settlementId: result.rows[0].id,
         amount: parseFloat(result.rows[0].amount),
         status: result.rows[0].status,
-        message: 'Payment verified successfully'
+        message: 'Payment confirmed successfully'
       }
     });
   } catch (error) {
-    console.error('Verify payment error:', error);
+    console.error('Confirm payment error:', error);
     res.status(500).json({
       success: false,
-      error: 'Error verifying payment'
+      error: 'Error confirming payment'
     });
   }
 });

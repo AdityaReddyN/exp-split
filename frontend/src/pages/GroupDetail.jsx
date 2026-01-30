@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, TrendingDown, Users, History, ArrowLeft } from 'lucide-react';
+import { Plus, TrendingDown, Users, History, ArrowLeft, BarChart3, FileDown } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import apiClient from '../utils/api';
 import toast from '../utils/toast';
 import AddExpenseModal from '../components/AddExpenseModal';
 import PaymentModal from '../components/PaymentModal';
+import './GroupDetail.css';
 
 export default function GroupDetail() {
   const { id } = useParams();
@@ -42,6 +44,89 @@ export default function GroupDetail() {
     }
   };
 
+  const generateReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header - Use sage green tones
+    doc.setFontSize(22);
+    doc.setTextColor(80, 92, 69); // sage-darkest
+    doc.text(`Expense Report: ${group.name}`, 20, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 28);
+    doc.text(`Group Code: ${group.code} | Category: ${group.category}`, 20, 33);
+
+    // Divider
+    doc.setDrawColor(147, 168, 126); // sage-medium
+    doc.setLineWidth(0.5);
+    doc.line(20, 38, pageWidth - 20, 38);
+
+    // Summary Section
+    doc.setFontSize(16);
+    doc.setTextColor(50);
+    doc.text('Summary', 20, 50);
+
+    doc.setFontSize(12);
+    doc.text(`Total Group Expenses: INR ${balances?.totalSpent.toFixed(2)}`, 20, 60);
+    doc.text(`Total Members: ${group.members.length}`, 20, 67);
+
+    // Balances Section
+    doc.setFontSize(14);
+    doc.setTextColor(80, 92, 69);
+    doc.text('Current Balances', 20, 80);
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    let yPos = 88;
+    balances?.balances.forEach((b) => {
+      const status = b.balance > 0 ? 'Receives' : b.balance < 0 ? 'Owes' : 'Settled';
+      doc.text(`${b.name}:`, 25, yPos);
+      doc.setTextColor(b.balance > 0 ? 34 : b.balance < 0 ? 153 : 100); // green for positive, red for negative
+      doc.text(`${status} INR ${Math.abs(b.balance).toFixed(2)}`, 70, yPos);
+      doc.setTextColor(0);
+      yPos += 7;
+    });
+
+    // Detailed Expenses Section
+    doc.addPage();
+    doc.setFontSize(18);
+    doc.setTextColor(80, 92, 69);
+    doc.text('Full Expense List', 20, 20);
+
+    doc.setDrawColor(212, 243, 183);
+    doc.line(20, 25, pageWidth - 20, 25);
+
+    yPos = 35;
+    expenses.forEach((e, index) => {
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(40);
+      doc.text(`${index + 1}. ${e.description}`, 20, yPos);
+
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      const expenseDate = new Date(e.date).toLocaleDateString();
+      doc.text(`Paid by ${e.paid_by_name} on ${expenseDate}`, 25, yPos + 6);
+
+      doc.setFontSize(12);
+      doc.setTextColor(80, 92, 69);
+      doc.text(`INR ${e.amount.toFixed(2)}`, pageWidth - 55, yPos + 3);
+
+      doc.setDrawColor(245);
+      doc.line(20, yPos + 10, pageWidth - 20, yPos + 10);
+      yPos += 18;
+    });
+
+    doc.save(`${group.name}_Expense_Report.pdf`);
+    toast.success('PDF Report downloaded!');
+  };
+
   const handleAddExpense = async (expenseData) => {
     try {
       await apiClient.post('/expenses', {
@@ -62,10 +147,10 @@ export default function GroupDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="group-detail-loading">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mb-4"></div>
-          <p className="text-white/80">Loading group details...</p>
+          <div className="group-detail-loading-spinner"></div>
+          <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginTop: '1rem' }}>Loading group details...</p>
         </div>
       </div>
     );
@@ -73,51 +158,67 @@ export default function GroupDetail() {
 
   if (!group) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-12 border border-white/20">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Group not found</h1>
-          <p className="text-gray-600">The group you're looking for doesn't exist.</p>
+      <div className="group-detail-not-found">
+        <div className="group-detail-not-found-card">
+          <h1 className="group-detail-not-found-title">Group not found</h1>
+          <p className="group-detail-not-found-text">The group you're looking for doesn't exist.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="group-detail-container">
+      <div className="group-detail-content">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4 animate-fade-in">
-          <div className="flex-1">
+        <div className="group-detail-header">
+          <div style={{ flex: 1 }}>
             <button
               onClick={() => navigate('/dashboard')}
-              className="mb-4 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+              className="group-detail-back-button"
             >
               <ArrowLeft size={20} />
-              <span className="font-medium">Back to Dashboard</span>
+              <span>Back to Dashboard</span>
             </button>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">{group.name}</h1>
+            <h1 className="group-detail-title">{group.name}</h1>
             {group.description && (
-              <p className="text-white/90 text-lg mb-4">{group.description}</p>
+              <p className="group-detail-description">{group.description}</p>
             )}
-            <div className="flex flex-wrap gap-3">
-              <span className="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full font-semibold text-sm border border-white/30">
+            <div className="group-detail-badges">
+              <span className="group-detail-badge">
                 {group.member_count || group.members.length} members
               </span>
-              <span className="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full font-semibold text-sm border border-white/30 capitalize">
+              <span className="group-detail-badge" style={{ textTransform: 'capitalize' }}>
                 {group.category}
               </span>
             </div>
           </div>
-          <button
-            onClick={() => setShowAddExpense(true)}
-            className="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl border border-white/30"
-          >
-            <Plus size={20} /> Add Expense
-          </button>
+          <div className="group-detail-header-actions" style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={generateReport}
+              className="group-detail-add-button"
+              style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+            >
+              <FileDown size={20} /> Report
+            </button>
+            <button
+              onClick={() => navigate(`/groups/${id}/analytics`)}
+              className="group-detail-add-button"
+              style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+            >
+              <BarChart3 size={20} /> Analytics
+            </button>
+            <button
+              onClick={() => setShowAddExpense(true)}
+              className="group-detail-add-button"
+            >
+              <Plus size={20} /> Add Expense
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/20">
+        <div className="group-detail-tabs">
           {[
             { key: 'expenses', label: 'Expenses', icon: Plus },
             { key: 'balances', label: 'Balances', icon: Users },
@@ -127,11 +228,7 @@ export default function GroupDetail() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-200 ${
-                activeTab === tab.key
-                  ? 'bg-white text-indigo-600 shadow-lg'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'
-              }`}
+              className={`group-detail-tab ${activeTab === tab.key ? 'group-detail-tab--active' : ''}`}
             >
               <tab.icon size={20} />
               {tab.label}
@@ -140,34 +237,34 @@ export default function GroupDetail() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20 animate-fade-in">
+        <div className="group-detail-content-card">
           {/* Expenses Tab */}
           {activeTab === 'expenses' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Expenses</h2>
+              <h2 className="group-detail-section-title">Recent Expenses</h2>
               {expenses.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Plus className="text-gray-400" size={32} />
+                <div className="group-detail-empty">
+                  <div className="group-detail-empty-icon">
+                    <Plus size={32} />
                   </div>
-                  <p className="text-gray-600 text-lg">No expenses yet</p>
-                  <p className="text-gray-500 text-sm mt-2">Add your first expense to get started</p>
+                  <p className="group-detail-empty-text">No expenses yet</p>
+                  <p className="group-detail-empty-subtext">Add your first expense to get started</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="group-detail-expenses-list">
                   {expenses.map(expense => (
-                    <div key={expense.id} className="border-2 border-gray-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-white to-gray-50">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-900 text-lg mb-1">{expense.description}</p>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Paid by <span className="font-semibold text-gray-900">{expense.paid_by_name}</span>
+                    <div key={expense.id} className="group-detail-expense-card">
+                      <div className="group-detail-expense-header">
+                        <div className="group-detail-expense-info">
+                          <p className="group-detail-expense-description">{expense.description}</p>
+                          <p className="group-detail-expense-payer">
+                            Paid by <span className="group-detail-expense-payer-name">{expense.paid_by_name}</span>
                           </p>
-                          <p className="text-xs text-gray-500">{new Date(expense.date).toLocaleDateString()}</p>
+                          <p className="group-detail-expense-date">{new Date(expense.date).toLocaleDateString()}</p>
                         </div>
-                        <div className="text-right ml-4">
-                          <p className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">₹{expense.amount.toFixed(2)}</p>
-                          <p className="text-xs text-gray-500 mt-1">{expense.splits.length} {expense.splits.length === 1 ? 'person' : 'people'}</p>
+                        <div className="group-detail-expense-amount">
+                          <p className="group-detail-expense-amount-value">₹{expense.amount.toFixed(2)}</p>
+                          <p className="group-detail-expense-splits">{expense.splits.length} {expense.splits.length === 1 ? 'person' : 'people'}</p>
                         </div>
                       </div>
                     </div>
@@ -180,31 +277,32 @@ export default function GroupDetail() {
           {/* Balances Tab */}
           {activeTab === 'balances' && balances && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Individual Balances</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <h2 className="group-detail-section-title">Individual Balances</h2>
+              <div className="group-detail-balances-grid">
                 {balances.balances.map(balance => (
-                  <div key={balance.userId} className="border-2 border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="font-bold text-gray-900 text-lg">{balance.name}</span>
-                      <span className={`text-xl font-bold ${
-                        balance.balance > 0 ? 'text-green-600' : balance.balance < 0 ? 'text-red-600' : 'text-gray-600'
-                      }`}>
+                  <div key={balance.userId} className="group-detail-balance-card">
+                    <div className="group-detail-balance-header">
+                      <span className="group-detail-balance-name">{balance.name}</span>
+                      <span className={`group-detail-balance-amount ${balance.balance > 0 ? 'group-detail-balance-amount--positive' :
+                        balance.balance < 0 ? 'group-detail-balance-amount--negative' :
+                          'group-detail-balance-amount--zero'
+                        }`}>
                         {balance.balance > 0 ? '+' : ''}₹{balance.balance.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex gap-4 text-xs text-gray-600 pt-3 border-t border-gray-200">
-                      <span className="flex-1">
-                        <span className="font-semibold text-gray-700">Paid:</span> ₹{balance.totalPaid.toFixed(2)}
-                      </span>
-                      <span className="flex-1">
-                        <span className="font-semibold text-gray-700">Owes:</span> ₹{balance.totalOwed.toFixed(2)}
-                      </span>
+                    <div className="group-detail-balance-details">
+                      <div className="group-detail-balance-detail">
+                        <span className="group-detail-balance-detail-label">Paid:</span> ₹{balance.totalPaid.toFixed(2)}
+                      </div>
+                      <div className="group-detail-balance-detail">
+                        <span className="group-detail-balance-detail-label">Owes:</span> ₹{balance.totalOwed.toFixed(2)}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-5 border-2 border-indigo-200">
-                <p className="text-gray-700 font-semibold">Total Spent: <span className="font-bold text-gray-900 text-xl">₹{balances.totalSpent.toFixed(2)}</span></p>
+              <div className="group-detail-total-spent">
+                <p className="group-detail-total-spent-text">Total Spent: <span className="group-detail-total-spent-amount">₹{balances.totalSpent.toFixed(2)}</span></p>
               </div>
             </div>
           )}
@@ -212,31 +310,29 @@ export default function GroupDetail() {
           {/* Settlements Tab */}
           {activeTab === 'settlements' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Optimal Settlements</h2>
-              <p className="text-sm text-gray-600 mb-6">
-                {settlements.length} {settlements.length === 1 ? 'transaction' : 'transactions'} ({settlements.length > 0 ? 'optimized' : 'none needed'})
-              </p>
+              <div className="group-detail-settlements-header">
+                <h2 className="group-detail-section-title" style={{ marginBottom: 0 }}>Optimal Settlements</h2>
+                <p className="group-detail-settlements-count">
+                  {settlements.length} {settlements.length === 1 ? 'transaction' : 'transactions'} ({settlements.length > 0 ? 'optimized' : 'none needed'})
+                </p>
+              </div>
               {settlements.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">🎉</div>
-                  <p className="text-gray-700 text-lg font-semibold">Everyone is settled up!</p>
-                  <p className="text-gray-500 text-sm mt-2">No payments needed</p>
+                <div className="group-detail-settled-message">
+                  <div className="group-detail-settled-emoji">🎉</div>
+                  <p className="group-detail-settled-text">Everyone is settled up!</p>
+                  <p className="group-detail-settled-subtext">No payments needed</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="group-detail-settlements-list">
                   {settlements.map((settlement, idx) => (
-                    <div key={idx} className="border-2 border-orange-200 rounded-xl p-5 bg-gradient-to-r from-orange-50 via-red-50 to-orange-50 hover:shadow-lg transition-all duration-200">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-900 text-lg">
-                            <span className="text-red-600">{settlement.fromName}</span>
-                            <span className="text-gray-400 mx-3">→</span>
-                            <span className="text-green-600">{settlement.toName}</span>
-                          </p>
+                    <div key={idx} className="group-detail-settlement-card">
+                      <div className="group-detail-settlement-header">
+                        <div className="group-detail-settlement-flow">
+                          <span className="group-detail-settlement-from">{settlement.fromName}</span>
+                          <span className="group-detail-settlement-arrow">→</span>
+                          <span className="group-detail-settlement-to">{settlement.toName}</span>
                         </div>
-                        <div className="text-right ml-4">
-                          <p className="text-2xl font-bold text-orange-600">₹{settlement.amount.toFixed(2)}</p>
-                        </div>
+                        <div className="group-detail-settlement-amount">₹{settlement.amount.toFixed(2)}</div>
                       </div>
                       <button
                         onClick={() => setPaymentSettlement({
@@ -248,7 +344,7 @@ export default function GroupDetail() {
                           toName: settlement.toName,
                           amount: settlement.amount
                         })}
-                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        className="group-detail-settlement-button"
                       >
                         Mark Paid
                       </button>
@@ -262,18 +358,18 @@ export default function GroupDetail() {
           {/* Members Tab */}
           {activeTab === 'members' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Group Members</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h2 className="group-detail-section-title">Group Members</h2>
+              <div className="group-detail-members-grid">
                 {group.members.map(member => (
-                  <div key={member.id} className="border-2 border-gray-200 rounded-xl p-5 flex items-center justify-between hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                  <div key={member.id} className="group-detail-member-card">
+                    <div className="group-detail-member-info">
+                      <div className="group-detail-member-avatar">
                         {member.avatar || member.name.charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="font-bold text-gray-900">{member.name}</p>
-                        <p className="text-xs text-gray-600 mt-1">{member.email}</p>
-                        <p className="text-xs font-semibold text-indigo-600 mt-2 uppercase bg-indigo-100 px-2 py-1 rounded-full inline-block">{member.role}</p>
+                      <div className="group-detail-member-details">
+                        <p className="group-detail-member-name">{member.name}</p>
+                        <p className="group-detail-member-email">{member.email}</p>
+                        <span className="group-detail-member-role">{member.role}</span>
                       </div>
                     </div>
                   </div>

@@ -1,0 +1,79 @@
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 2px solid;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(4px);
+  animation: slideInRight 0.3s ease-out;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  font-weight: 500;
+}
+
+.toast-close {
+  color: currentColor;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.toast--success {
+  background: rgba(212, 243, 183, 0.95);
+  /* sage-lightest */
+  border-color: #BFDAA4;
+  color: #505C45;
+}
+
+.toast--error {
+  background: rgba(254, 242, 242, 0.95);
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.toast--info {
+  background: rgba(191, 218, 164, 0.95);
+  /* sage-lighter */
+  border-color: #A9C191;
+  color: #505C45;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
