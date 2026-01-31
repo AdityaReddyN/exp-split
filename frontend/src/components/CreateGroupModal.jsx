@@ -35,7 +35,7 @@ export default function CreateGroupModal({ onClose, onCreate }) {
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2 className="modal-title">Create Group</h2>
+          <h2 className="modal-title">Create Flow</h2>
           <button onClick={onClose} className="modal-close-button">
             <X size={24} />
           </button>
@@ -43,7 +43,7 @@ export default function CreateGroupModal({ onClose, onCreate }) {
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="modal-form-group">
-            <label className="modal-label">Group Name *</label>
+            <label className="modal-label">Flow Name *</label>
             <input
               type="text"
               name="name"
@@ -84,7 +84,7 @@ export default function CreateGroupModal({ onClose, onCreate }) {
           </div>
 
           <div className="modal-form-group">
-            <label className="modal-label">Group Type</label>
+            <label className="modal-label">Flow Type</label>
             <div className="modal-radio-group">
               <label className="modal-radio-label">
                 <input

@@ -99,7 +99,7 @@ export default function PaymentModal({ settlement, onClose, onPaid }) {
               handleStripePayment();
             }}
             disabled={loading || settlement.amount < 50}
-            className={`payment-modal-button payment-modal-button--razorpay ${settlement.amount < 50 ? 'disabled' : ''}`}
+            className={`payment-modal-button payment-modal-button--stripe ${settlement.amount < 50 ? 'disabled' : ''}`}
             style={settlement.amount < 50 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             <CreditCard size={20} />

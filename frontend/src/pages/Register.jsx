@@ -50,8 +50,8 @@ export default function Register() {
     <div className="register-container">
       <div className="register-wrapper">
         <div className="register-card">
-          <Link to="/dashboard" className="register-back-button">
-            <ArrowLeft size={20} /> Back to Dashboard
+          <Link to="/" className="register-back-button">
+            <ArrowLeft size={20} /> Back to Home
           </Link>
 
           <div className="register-icon-wrapper">

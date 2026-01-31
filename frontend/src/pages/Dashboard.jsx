@@ -108,8 +108,8 @@ export default function Dashboard() {
         {/* Header */}
         <div className="dashboard-header">
           <div className="dashboard-header-left">
-            <h1 className="dashboard-title">Expense Split</h1>
-            <p className="dashboard-subtitle">Manage and split expenses with friends</p>
+            <h1 className="dashboard-title">XPenseFlow</h1>
+            <p className="dashboard-subtitle">Manage and budget group expenses with friends</p>
           </div>
           <div className="dashboard-actions">
             {isAuthenticated ? (
@@ -158,7 +158,7 @@ export default function Dashboard() {
               <Users size={40} />
             </div>
             <h2 className="dashboard-empty-title">
-              {isAuthenticated ? 'Start Your First Group' : 'Welcome to Expense Split'}
+              {isAuthenticated ? 'Start Your First Group' : 'Welcome to XPenseFlow'}
             </h2>
             <p className="dashboard-empty-text">
               {isAuthenticated

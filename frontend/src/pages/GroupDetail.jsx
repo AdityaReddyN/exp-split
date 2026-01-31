@@ -222,15 +222,13 @@ export default function GroupDetail() {
           <div className="group-detail-header-actions" style={{ display: 'flex', gap: '1rem' }}>
             <button
               onClick={generateReport}
-              className="group-detail-add-button"
-              style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+              className="group-detail-button-secondary"
             >
-              <FileDown size={20} /> Report
+              <FileDown size={20} /> Get Report
             </button>
             <button
               onClick={() => navigate(`/groups/${id}/analytics`)}
-              className="group-detail-add-button"
-              style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+              className="group-detail-button-secondary"
             >
               <BarChart3 size={20} /> Analytics
             </button>
@@ -372,7 +370,7 @@ export default function GroupDetail() {
                         })}
                         className="group-detail-settlement-button"
                       >
-                        Mark Paid
+                        Pay
                       </button>
                     </div>
                   ))}

@@ -173,109 +173,119 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
   const amount = parseFloat(formData.amount) || 0;
 
   return (
-    <div className="modal-overlay" style={{ overflowY: 'auto' }}>
-      <div className="modal-content" style={{ margin: '2rem 0' }}>
+    <div className="modal-overlay">
+      <div className="modal-content">
         <div className="modal-header">
           <h2 className="modal-title">Add Expense</h2>
-          <button onClick={onClose} className="modal-close-button">
+          <button onClick={onClose} className="modal-close-button" style={{ background: 'transparent', border: 'none', color: '#A0AEC0', cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="expense-modal-form">
-          <div className="modal-form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <label className="modal-label" style={{ marginBottom: 0 }}>Description *</label>
-              <label className="scan-button" style={{
-                fontSize: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                cursor: scanning ? 'not-allowed' : 'pointer',
-                color: '#93A87E',
-                fontWeight: '600',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '0.5rem',
-                backgroundColor: 'rgba(147, 168, 126, 0.1)',
-                transition: 'all 0.2s ease'
-              }}>
-                {scanning ? <Loader2 size={14} className="spin" /> : <Camera size={14} />}
-                {scanning ? 'Scanning...' : 'Scan Receipt'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleScanReceipt}
-                  style={{ display: 'none' }}
-                  disabled={scanning}
-                />
-              </label>
+          {/* Top Row: Description & Amount */}
+          <div className="modal-form-row">
+            <div className="modal-form-group" style={{ gridColumn: 'span 2' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label className="modal-label" style={{ marginBottom: 0 }}>Description *</label>
+                <label className="scan-button" style={{
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  cursor: scanning ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '0.5rem',
+                  transition: 'all 0.2s ease'
+                }}>
+                  {scanning ? <Loader2 size={14} className="spin" /> : <Camera size={14} />}
+                  {scanning ? 'Scanning...' : 'Scan Receipt'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleScanReceipt}
+                    style={{ display: 'none' }}
+                    disabled={scanning}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="What is this for? (e.g. Dinner)"
+                className="modal-input"
+                autoFocus
+              />
             </div>
-            <input
-              type="text"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="e.g., Lunch"
-              className="modal-input"
-            />
+          </div>
+
+          <div className="modal-form-row">
+            <div className="modal-form-group">
+              <label className="modal-label">Amount *</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.2rem' }}>₹</span>
+                <input
+                  type="number"
+                  name="amount"
+                  value={formData.amount}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="modal-input"
+                  style={{ paddingLeft: '2.5rem' }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-form-group">
+              <label className="modal-label">Category</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="modal-select"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat.toLowerCase()}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="modal-form-row">
+            <div className="modal-form-group">
+              <label className="modal-label">Paid By *</label>
+              <select
+                name="paidBy"
+                value={formData.paidBy}
+                onChange={handleChange}
+                className="modal-select"
+              >
+                <option value="">Select person</option>
+                {members.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="modal-form-group">
+              <label className="modal-label">Date</label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                className="modal-input"
+              />
+            </div>
           </div>
 
           <div className="modal-form-group">
-            <label className="modal-label">Amount *</label>
-            <input
-              type="number"
-              name="amount"
-              value={formData.amount}
-              onChange={handleChange}
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              className="modal-input"
-            />
-          </div>
-
-          <div className="modal-form-group">
-            <label className="modal-label">Paid By *</label>
-            <select
-              name="paidBy"
-              value={formData.paidBy}
-              onChange={handleChange}
-              className="modal-select"
-            >
-              <option value="">Select person</option>
-              {members.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="modal-form-group">
-            <label className="modal-label">Category</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="modal-select"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat.toLowerCase()}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="modal-form-group">
-            <label className="modal-label">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="modal-input"
-            />
-          </div>
-
-          <div className="modal-form-group">
-            <label className="modal-label">Split Type</label>
+            <label className="modal-label">Split Method</label>
             <div className="modal-radio-group">
               {['equal', 'custom', 'percentage'].map(type => (
                 <label key={type} className="modal-radio-label">
@@ -287,14 +297,14 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
                     onChange={handleChange}
                     className="modal-radio-input"
                   />
-                  <span className="modal-radio-text" style={{ textTransform: 'capitalize' }}>{type} Split</span>
+                  <span className="modal-radio-text" style={{ textTransform: 'capitalize' }}>{type}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="modal-form-group">
-            <label className="modal-label">Split Between</label>
+            <label className="modal-label">Split Between ({selectedMembers.size})</label>
             <div className="expense-modal-checkbox-group">
               {members.map(member => (
                 <div key={member.id} className="expense-modal-member-item">
@@ -314,6 +324,7 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
                       placeholder="Amount"
                       step="0.01"
                       value={customSplits[member.id] || ''}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => setCustomSplits({
                         ...customSplits,
                         [member.id]: e.target.value
@@ -328,6 +339,7 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
                       placeholder="%"
                       max="100"
                       value={percentageSplits[member.id] || ''}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => setPercentageSplits({
                         ...percentageSplits,
                         [member.id]: e.target.value
@@ -340,12 +352,12 @@ export default function AddExpenseModal({ onClose, onAdd, members }) {
             </div>
           </div>
 
-          <div className="modal-actions">
+          <div className="modal-actions" style={{ marginTop: '1rem' }}>
             <button type="button" onClick={onClose} className="modal-button modal-button--cancel">
               Cancel
             </button>
             <button type="submit" className="modal-button modal-button--submit">
-              Add
+              Add Expense
             </button>
           </div>
         </form>

@@ -34,8 +34,8 @@ export default function Login() {
     <div className="login-container">
       <div className="login-wrapper">
         <div className="login-card">
-          <Link to="/dashboard" className="login-back-button">
-            <ArrowLeft size={20} /> Back to Dashboard
+          <Link to="/" className="login-back-button">
+            <ArrowLeft size={20} /> Back to Home
           </Link>
 
           <div className="login-icon-wrapper">

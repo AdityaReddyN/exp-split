@@ -89,6 +89,28 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
+/* Added Secondary Button Style */
+.group-detail-button-secondary {
+  background: rgba(0, 181, 173, 0.1);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 0.85rem 1.75rem;
+  border-radius: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.group-detail-button-secondary:hover {
+  background: var(--primary);
+  color: var(--bg-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px 0 var(--primary-glow);
+}
+
 .group-detail-tabs {
   display: flex;
   gap: 0.5rem;
