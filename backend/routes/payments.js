@@ -31,6 +31,13 @@ router.post('/create-payment-intent', authMiddleware, async (req, res) => {
       });
     }
 
+    if (parsedAmount < 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount too small for Stripe (minimum ₹50)'
+      });
+    }
+
     const userId = req.user.userId;
 
     // If no settlementId exists, create a pending settlement record
@@ -93,6 +100,14 @@ router.post('/create-checkout-session', authMiddleware, async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
+      });
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (parsedAmount < 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount too small for Stripe (minimum ₹50)'
       });
     }
 

@@ -88,13 +88,19 @@ export default function PaymentModal({ settlement, onClose, onPaid }) {
         </div>
 
         <div className="payment-modal-actions">
+          {settlement.amount < 50 && (
+            <p className="payment-modal-warning" style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '1rem', textAlign: 'center' }}>
+              Stripe requires a minimum of ₹50.00. Please use UPI or Cash.
+            </p>
+          )}
           <button
             onClick={() => {
               setPaymentMethod('stripe');
               handleStripePayment();
             }}
-            disabled={loading}
-            className="payment-modal-button payment-modal-button--razorpay"
+            disabled={loading || settlement.amount < 50}
+            className={`payment-modal-button payment-modal-button--razorpay ${settlement.amount < 50 ? 'disabled' : ''}`}
+            style={settlement.amount < 50 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             <CreditCard size={20} />
             Pay with Stripe
