@@ -1,4 +1,11 @@
-./frontend/node_modules
-./frontend/.env
-./backend/node_modules
-./backend/.env
+# Dependencies (anywhere)
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Optional build output
+dist/
+build/
+
