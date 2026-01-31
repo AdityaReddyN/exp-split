@@ -7,7 +7,6 @@ A **modern, full-stack expense splitting application** built with React, Node.js
 ![PostgreSQL](https://img.shields.io/badge/postgresql-12+-336791.svg)
 ![Stripe](https://img.shields.io/badge/stripe-integrated-5469d4.svg)
 ![CSS](https://img.shields.io/badge/css-vanilla-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## 🎯 Quick Links
 
