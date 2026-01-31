@@ -324,15 +324,7 @@ JWT_SECRET=your_random_32_character_secret_key_here_change_this_to_random
 # ==========================================
 STRIPE_PUBLIC_KEY=pk_test_51234567890abcdefghijklmnop
 STRIPE_SECRET_KEY=sk_test_abcdefghijklmnopqrstuvwxyz1234567890
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 
-# ==========================================
-# EMAIL CONFIGURATION (Optional)
-# ==========================================
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_specific_password
 
 # ==========================================
 # FILE UPLOAD
