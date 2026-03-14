@@ -96,7 +96,6 @@ export default function Landing() {
                         <PieChart size={24} />
                         <span>XPenseFlow</span>
                     </div>
-                    <p className="copyright">© 2024 XPenseFlow. All rights reserved.</p>
                 </div>
             </footer>
         </div>
